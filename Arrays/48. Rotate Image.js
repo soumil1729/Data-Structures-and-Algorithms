@@ -21,6 +21,7 @@ var rotate = function (matrix) {
 
     reverse(matrix[row]);
   }
+
   return matrix;
 };
 
