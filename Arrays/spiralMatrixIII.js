@@ -5,7 +5,62 @@
  * @param {number} cStart
  * @return {number[][]}
  */
+
+// intuitive solution
 var spiralMatrixIII = function (rows, cols, rStart, cStart) {
+  let total = rows * cols;
+  let matrix = new Array(total).fill(new Array(2));
+
+  let count = 0;
+  let distance = 1;
+
+  matrix[count++] = [rStart, cStart];
+
+  const check = function (rStart, cStart, rows, cols) {
+    //if rows are less than row length and greater than 0
+    if (rStart < rows && rStart >= 0 && cStart < cols && cStart >= 0) {
+      matrix[count] = [rStart, cStart];
+      count++;
+    }
+  };
+
+  while (count < total) {
+    //row right/ East row, col++
+    for (let i = 0; i < distance; i++) {
+      cStart++;
+      check(rStart, cStart, rows, cols);
+    }
+
+    //col down /south row++, col
+    for (let i = 0; i < distance; i++) {
+      rStart++;
+      check(rStart, cStart, rows, cols);
+    }
+
+    //every two operation length increase
+    distance++;
+
+    //row left/ west row, col--
+    for (let i = 0; i < distance; i++) {
+      cStart--;
+      check(rStart, cStart, rows, cols);
+    }
+
+    //col up / East row--, col
+    for (let i = 0; i < distance; i++) {
+      rStart--;
+      check(rStart, cStart, rows, cols);
+    }
+
+    distance++;
+  }
+
+  return matrix;
+};
+console.log(spiralMatrixIII(3, 3, 0, 0));
+
+//clever solution
+var spiralMatrixIII2 = function (rows, cols, rStart, cStart) {
   let total = rows * cols;
   let matrix = new Array(total).fill(new Array(2));
 
@@ -35,5 +90,4 @@ var spiralMatrixIII = function (rows, cols, rStart, cStart) {
   return matrix;
 };
 
-console.log(spiralMatrixIII(3, 3, 0, 0));
-console.log(spiralMatrixIII(1, 4, 0, 0));
+// console.log(spiralMatrixIII(1, 4, 0, 0));
