@@ -32,6 +32,7 @@ var setZeroes = function (matrix) {
   return matrix;
 };
 
+//O(1)space o(n * m)
 var setZeroes2 = function (matrix) {
   let m = matrix.length;
   let n = matrix[0].length;
