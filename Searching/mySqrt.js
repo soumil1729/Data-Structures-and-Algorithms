@@ -21,4 +21,4 @@ var mySqrt = function (x) {
   return ans;
 };
 
-console.log(mySqrt(15));
+console.log(mySqrt(1));
