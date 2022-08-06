@@ -1,0 +1,203 @@
+import data from './data.json' assert { type: 'json' };
+// const data = require('./data.json');
+
+function excelToData() {
+  let startrow = null;
+  let endrow = null;
+
+  const heading = {
+    // ---B: 'process_no'----,
+  };
+
+  for (let cell in data) {
+    const cellAsString = cell.toString();
+    let onlyString = cell.replace(/[0-9]/g, '');
+
+    switch (data[cellAsString].v) {
+      case 'Opn. No.':
+        heading[onlyString] = 'process_no';
+        startrow = `${onlyString}${+cellAsString.replace(/[a-zA-Z]/g, '') + 1}`;
+        break;
+      case 'Opn Description':
+        heading[onlyString] = 'process_name';
+        break;
+      case 'Device':
+        heading[onlyString] = 'machine';
+        break;
+      case 'Product':
+        heading[onlyString] = 'char_product';
+        break;
+      case 'Process':
+        heading[onlyString] = 'char_process';
+        break;
+      case 'Class':
+        heading[onlyString] = 'special_character';
+        break;
+      case 'Product Specification':
+        heading[onlyString] = 'control_product';
+        break;
+      case 'Process Specifications':
+        heading[onlyString] = 'control_product';
+        break;
+      case 'Evaluation':
+        heading[onlyString] = 'methods_measure';
+        break;
+      case 'Sample Size':
+        heading[onlyString] = 'methods_size';
+        //edge case ONLY FOR ARC
+        heading['S'] = 'methods_size_2';
+        break;
+      case "Freq'cy":
+        heading[onlyString] = 'methods_by';
+        break;
+      case "Resp'ty":
+        heading[onlyString] = 'responsibility';
+        break;
+      case 'Record':
+        heading[onlyString] = 'recording';
+        break;
+      case 'Control Method':
+        heading[onlyString] = 'methods_process';
+        break;
+      case 'Reactions if out of control conditions are encountered':
+        heading[onlyString] = 'reaction_plan';
+        break;
+
+      default:
+        break;
+    }
+    // console.log(cellAsString);
+    if (cellAsString !== '!margins' && cellAsString !== '!merges') {
+      endrow = cellAsString;
+    }
+  }
+
+  endrow = `${startrow.replace(/[0-9]/g, '')}${
+    +endrow.replace(/[a-zA-Z]/g, '') - 5
+  }`;
+
+  // let startrow = 'A9';
+  // let endrow = 'AC72';
+  function jsonToArray(obj) {
+    let oncefalse = false;
+    let y = [];
+    let beforeEndRow = null;
+    for (let cell in obj) {
+      if (cell === startrow || oncefalse) {
+        if (cell === endrow) break;
+        y.push({ [cell]: obj[cell] });
+        oncefalse = true;
+        beforeEndRow = cell;
+      }
+    }
+    console.log(beforeEndRow);
+    endrow = beforeEndRow;
+    return y;
+  }
+  const dataArr = jsonToArray(data);
+
+  const modifyandAddSkippingValues_spec = (prevMemory, specsObj) => {
+    for (let [key, value] of Object.entries(prevMemory)) {
+      if (!specsObj[key]) {
+        specsObj[key] = value;
+      }
+    }
+  };
+
+  function making(dataArr) {
+    let newPart = {};
+    let process = [];
+    let processObj = {};
+    let specs = [];
+    let specsObj = {};
+    let processCounter = 1;
+    let specsCounter = 1;
+
+    let startingLine = 9;
+    let currentLine = startingLine;
+    let prevMemory = {};
+
+    const createNewProcess = () => {
+      processObj.specs = specs;
+      processObj.failures = [];
+      specs = [];
+      process.push(processObj);
+      processObj = {};
+      processObj.add_to_pir = true;
+      processObj.order_no = processCounter;
+      processCounter += 1;
+      specsCounter = 1;
+      prevMemory = {};
+    };
+    const createNewSpecs = () => {
+      startingLine = currentLine;
+      specsObj.s_no = specsCounter;
+
+      modifyandAddSkippingValues_spec(prevMemory, specsObj);
+
+      //edge case only for ARC-----
+      specsObj['methods_size'] =
+        specsObj['methods_size'] && specsObj['methods_size_2']
+          ? `${specsObj['methods_size']} | ${specsObj['methods_size_2']}`
+          : specsObj['methods_size'] || specsObj['methods_size_2'];
+      // -------X-------
+
+      specs.push(specsObj);
+      specsObj = {};
+      specsCounter += 1;
+    };
+
+    for (let [key, value] of dataArr.entries()) {
+      let cell = Object.keys(value)[0];
+      currentLine = cell.replace(/[a-zA-Z]/g, '');
+      let cellString = cell.replace(/[0-9]/g, '');
+      let cellValue = Object.entries(value)[0];
+
+      if (cellString === 'A' && currentLine > startingLine) {
+        createNewSpecs();
+        createNewProcess();
+      } else {
+        if (cellString === 'A' && currentLine > startingLine) {
+          createNewProcess();
+        }
+
+        if (currentLine > startingLine) {
+          createNewSpecs();
+        }
+      }
+
+      if (heading[cellString]) {
+        specsObj[`${heading[cellString]}`] =
+          typeof cellValue[1].v === 'string'
+            ? cellValue[1].v.trim()
+            : cellValue[1].w;
+
+        if (/--/.test(specsObj[`${heading[cellString]}`])) {
+          specsObj[`${heading[cellString]}`] = '';
+        }
+
+        prevMemory[`${heading[cellString]}`] =
+          specsObj[`${heading[cellString]}`];
+      }
+
+      if (cell === endrow) {
+        //   console.log(specsObj);
+        createNewSpecs();
+        processObj.specs = specs;
+        processObj.failures = [];
+        specs = [];
+        process.push(processObj);
+        processObj = {};
+        console.log(prevMemory);
+        break;
+      }
+      newPart.processes = process;
+      // console.log(specs);
+    }
+    console.log(newPart);
+  }
+  making(dataArr);
+  console.log(heading);
+  console.log(endrow);
+}
+excelToData();
