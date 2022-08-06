@@ -2,71 +2,61 @@ import data from './data.json' assert { type: 'json' };
 // const data = require('./data.json');
 
 function excelToData() {
+  const fieldNames = {
+    start_row: 'Opn. No.',
+    'Opn. No.': 'process_no',
+    'Opn Description': 'process_name',
+    Device: 'machine',
+    Product: 'char_product',
+    Process: 'char_process',
+    Class: 'special_character',
+    'Product Specification': 'control_product',
+    'Process Specifications': 'control_product',
+    Evaluation: 'methods_measure',
+    'Sample Size': 'methods_size',
+    "Freq'cy": 'methods_by',
+    "Resp'ty": 'responsibility',
+    Record: 'recording',
+    'Control Method': 'methods_process',
+    'Reactions if out of control conditions are encountered': 'reaction_plan',
+  };
   let startrow = null;
   let endrow = null;
 
   const heading = {
     // ---B: 'process_no'----,
+    //edge ONLY FOR ARC
+    S: 'methods_size_2',
   };
+
+  const switchCases = {
+    //   something: (cellNum) => (heading[cellNum] = fieldNames[key]),
+  };
+
+  const addSwitchCase = (_case, fn) => {
+    switchCases[_case] = switchCases[_case] || (() => {});
+    switchCases[_case] = fn;
+  };
+  const dynamicSwitch = (value, cellNum) =>
+    switchCases[value] && switchCases[value](cellNum);
+
+  Object.keys(fieldNames).forEach((key) =>
+    addSwitchCase(key, (cellNum) => (heading[cellNum] = fieldNames[key]))
+  );
 
   for (let cell in data) {
     const cellAsString = cell.toString();
     let onlyString = cell.replace(/[0-9]/g, '');
 
-    switch (data[cellAsString].v) {
-      case 'Opn. No.':
-        heading[onlyString] = 'process_no';
-        startrow = `${onlyString}${+cellAsString.replace(/[a-zA-Z]/g, '') + 1}`;
-        break;
-      case 'Opn Description':
-        heading[onlyString] = 'process_name';
-        break;
-      case 'Device':
-        heading[onlyString] = 'machine';
-        break;
-      case 'Product':
-        heading[onlyString] = 'char_product';
-        break;
-      case 'Process':
-        heading[onlyString] = 'char_process';
-        break;
-      case 'Class':
-        heading[onlyString] = 'special_character';
-        break;
-      case 'Product Specification':
-        heading[onlyString] = 'control_product';
-        break;
-      case 'Process Specifications':
-        heading[onlyString] = 'control_product';
-        break;
-      case 'Evaluation':
-        heading[onlyString] = 'methods_measure';
-        break;
-      case 'Sample Size':
-        heading[onlyString] = 'methods_size';
-        //edge case ONLY FOR ARC
-        heading['S'] = 'methods_size_2';
-        break;
-      case "Freq'cy":
-        heading[onlyString] = 'methods_by';
-        break;
-      case "Resp'ty":
-        heading[onlyString] = 'responsibility';
-        break;
-      case 'Record':
-        heading[onlyString] = 'recording';
-        break;
-      case 'Control Method':
-        heading[onlyString] = 'methods_process';
-        break;
-      case 'Reactions if out of control conditions are encountered':
-        heading[onlyString] = 'reaction_plan';
-        break;
+    data[cellAsString].v === fieldNames.start_row &&
+      (startrow = `${onlyString}${+cellAsString.replace(/[a-zA-Z]/g, '') + 1}`);
 
-      default:
-        break;
-    }
-    // console.log(cellAsString);
+    const Data =
+      typeof data[cellAsString]?.v === 'string'
+        ? data[cellAsString]?.v.trim()
+        : data[cellAsString]?.w;
+    dynamicSwitch(Data, onlyString);
+
     if (cellAsString !== '!margins' && cellAsString !== '!merges') {
       endrow = cellAsString;
     }
@@ -76,8 +66,6 @@ function excelToData() {
     +endrow.replace(/[a-zA-Z]/g, '') - 5
   }`;
 
-  // let startrow = 'A9';
-  // let endrow = 'AC72';
   function jsonToArray(obj) {
     let oncefalse = false;
     let y = [];
@@ -90,7 +78,6 @@ function excelToData() {
         beforeEndRow = cell;
       }
     }
-    console.log(beforeEndRow);
     endrow = beforeEndRow;
     return y;
   }
@@ -153,6 +140,8 @@ function excelToData() {
       let cellString = cell.replace(/[0-9]/g, '');
       let cellValue = Object.entries(value)[0];
 
+      //   console.log(cellValue[1].v);
+
       if (cellString === 'A' && currentLine > startingLine) {
         createNewSpecs();
         createNewProcess();
@@ -176,9 +165,16 @@ function excelToData() {
           specsObj[`${heading[cellString]}`] = '';
         }
 
+        if (!heading[cellString]) {
+          console.log(cellValue[1].v);
+        }
         prevMemory[`${heading[cellString]}`] =
           specsObj[`${heading[cellString]}`];
       }
+
+      //   if (!heading[cellString]) {
+      //     console.log(cellValue[1].v);
+      //   }
 
       if (cell === endrow) {
         //   console.log(specsObj);
